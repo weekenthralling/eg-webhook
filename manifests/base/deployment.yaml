@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eg-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eg-webhook
+  template:
+    metadata:
+      labels:
+        app: eg-webhook
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+        - name: tablegpt
+          image: weekenthralling/eg-webhook:latest
+          envFrom:
+            - configMapRef:
+                name: eg-webhook-env
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          # TableGPT-slim comes with document indexing on startup, it could be slow
+          # See <https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes>
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi

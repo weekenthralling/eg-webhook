@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - pairs:
+      app: eg-webhook
+      app.kubernetes.io/name: eg-webhook
+      app.kubernetes.io/version: 378517d
+      app.kubernetes.io/managed-by: kubectl
+    includeSelectors: false
+
+resources:
+  - deployment.yaml
+  - service.yaml
+
+configMapGenerator:
+  - name: eg-webhook-env
+    envs:
+      - params.env
+
+# We need to disable suffix if we migrate to knative services
+# currently knative does not recognize configmaps with suffix hash
+# generatorOptions:
+#   disableNameSuffixHash: true
+
+images:
+  - name: weekenthralling/eg-webhook
+    newTag: 378517d
