@@ -26,6 +26,8 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	r.Get("/healthz", healthzHandler)
+
 	r.Get("/", api.ListKernels(sessionStore))
 	r.Get("/{id}", api.GetSession(sessionStore))
 	r.Delete("/", api.DeleteKernels(sessionStore))
@@ -36,4 +38,9 @@ func main() {
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Panic(err)
 	}
+}
+
+func healthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }
