@@ -1,23 +1,25 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 	"zjuici.com/tablegpt/eg-webhook/api"
 	"zjuici.com/tablegpt/eg-webhook/config"
-	db "zjuici.com/tablegpt/eg-webhook/storage"
+	"zjuici.com/tablegpt/eg-webhook/storage"
 )
 
 func main() {
 
 	// Load configuration
-	config.LoadConfig()
+	cfg := config.LoadConfig()
 	// Initialize the database
-	db.Init()
+	db := storage.Init(cfg)
 
-	sessionStore := db.NewKernelSessionStore(db.GetDB())
+	sessionStore := storage.NewKernelSessionStore(db)
 
 	r := chi.NewRouter()
 
@@ -29,7 +31,9 @@ func main() {
 	r.Delete("/", api.DeleteKernels(sessionStore))
 	r.Post("/{id}", api.SaveKernel(sessionStore))
 
-	if err := http.ListenAndServe(":8080", r); err != nil {
+	addr := fmt.Sprintf(":%d", cfg.Port)
+	log.Printf("Starting server on %s", addr)
+	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Panic(err)
 	}
 }

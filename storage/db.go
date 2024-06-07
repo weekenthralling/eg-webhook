@@ -1,35 +1,28 @@
 package storage
 
 import (
-	log "github.com/sirupsen/logrus"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm/logger"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm/logger"
+	"zjuici.com/tablegpt/eg-webhook/config"
 	"zjuici.com/tablegpt/eg-webhook/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"zjuici.com/tablegpt/eg-webhook/config"
 )
 
-var db *gorm.DB
+func Init(cfg *config.Config) *gorm.DB {
 
-func Init() {
-
-	cfg := config.GetConfig()
+	var db *gorm.DB
 	var err error
-
-	switch cfg.DBType {
+	switch cfg.Store.Type {
 	case "postgres":
-		db, err = gorm.Open(postgres.Open(cfg.DSN), &gorm.Config{
-			Logger: logger.Default.LogMode(logger.Info),
-		})
-	case "mysql":
-		db, err = gorm.Open(mysql.Open(cfg.DSN), &gorm.Config{
+		db, err = gorm.Open(postgres.Open(cfg.Store.Postgres.DSN), &gorm.Config{
 			Logger: logger.Default.LogMode(logger.Info),
 		})
 	default:
-		log.Fatalf("Unsupported DB type: %s", cfg.DBType)
+		log.Fatalf("Unsupported DB type: %s", cfg.Store.Type)
 	}
 
 	if err != nil {
@@ -41,8 +34,8 @@ func Init() {
 		log.Fatalf("Failed to obtain raw database connection: %s", err)
 	}
 
-	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
-	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(cfg.Store.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(cfg.Store.MaxIdleConns)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	if err := db.AutoMigrate(&models.KernelSession{}); err != nil {
@@ -50,8 +43,5 @@ func Init() {
 	}
 
 	log.Println("Database initialized successfully")
-}
-
-func GetDB() *gorm.DB {
 	return db
 }

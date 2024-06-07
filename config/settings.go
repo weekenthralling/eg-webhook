@@ -1,29 +1,53 @@
 package config
 
 import (
-	"github.com/kelseyhightower/envconfig"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
-type Config struct {
-	DatabaseURL string `split_words:"true" default:"" envconfig:"DATABASE_URL"`
-
-	DBType       string `split_words:"true" default:"postgres" envconfig:"DatabaseType"`
-	DSN          string `split_words:"true" default:"postgres://postgres:postgres@localhost:5432/?sslmode=disable" envconfig:"DatabaseDsn"`
-	MaxOpenConns int    `split_words:"true" default:"20" envconfig:"MaxOpenConns"`
-	MaxIdleConns int    `split_words:"true" default:"10" envconfig:"MaxIdleConns"`
+type StoreConfig struct {
+	Type         string         `mapstructure:"type"`
+	Postgres     PostgresConfig `mapstructure:"postgres"`
+	MaxOpenConns int            `mapstructure:"max_open_conns"`
+	MaxIdleConns int            `mapstructure:"max_idle_conns"`
 }
 
-var config Config
+type PostgresConfig struct {
+	DSN string `mapstructure:"dsn"`
+}
 
-func LoadConfig() {
-	err := envconfig.Process("", &config)
-	if err != nil {
-		log.Fatalf("Failed to parse configuration: %+v", err)
+type Config struct {
+	Port int `mapstructure:"port"`
+
+	Store StoreConfig `mapstructure:"store"`
+}
+
+func LoadConfig() *Config {
+
+	viper.AutomaticEnv()
+
+	viper.SetEnvPrefix("HOOK")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// set env default
+	viper.SetDefault("port", 8080)
+	viper.SetDefault("store.max_open_conns", 10)
+	viper.SetDefault("store.max_idle_conns", 5)
+
+	// bind env
+	viper.BindEnv("port")
+	viper.BindEnv("store.type")
+	viper.BindEnv("store.postgres.dsn")
+	viper.BindEnv("store.max_open_conns")
+	viper.BindEnv("store.max_idle_conns")
+
+	var config Config
+	// Unmarshal the config into the Config struct
+	if err := viper.Unmarshal(&config); err != nil {
+		log.Fatalf("Unable to decode into struct: %v", err)
 	}
 	log.Infof("Config: %+v", config)
-}
-
-func GetConfig() Config {
-	return config
+	return &config
 }
